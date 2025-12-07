@@ -83,6 +83,17 @@ export function loadConfig() {
         linuxdo: parseBoolean(process.env.ENABLE_LINUXDO_OAUTH),
     };
 
+    // 新增配置：是否允许手动注册/登录（默认开启）
+    const enableManualLogin = process.env.ENABLE_MANUAL_LOGIN === undefined 
+        ? true 
+        : parseBoolean(process.env.ENABLE_MANUAL_LOGIN);
+
+    // 新增配置：Discord 服务器验证
+    const discordConfig = {
+        requiredGuildId: process.env.DISCORD_REQUIRED_GUILD_ID,
+        minJoinDays: parseInt(process.env.DISCORD_MIN_JOIN_DAYS || '0', 10),
+    };
+
     // 获取基础 URL（用于 OAuth 回调）
     const baseRegisterUrl = process.env.REGISTER_BASE_URL || `http://localhost:${port}`;
 
@@ -91,6 +102,7 @@ export function loadConfig() {
         host: listenHost,
         baseUrl,
         baseRegisterUrl,
+        enableManualLogin, // 导出配置
         adminHandle: adminHandleEnv.trim(),
         adminPassword: adminPasswordEnv,
         adminPanelPassword: ADMIN_PANEL_PASSWORD,
@@ -100,6 +112,7 @@ export function loadConfig() {
         maxLoginAttempts: MAX_LOGIN_ATTEMPTS,
         loginLockoutTime: LOGIN_LOCKOUT_TIME,
         oauthEnabled,
+        discordConfig, // 导出 Discord 配置
         ...oauthConfig,
     };
 }

@@ -493,6 +493,7 @@
                 <button class="tab active" data-tab="users">用户列表</button>
                 <button class="tab" data-tab="servers">服务器管理</button>
                 <button class="tab" data-tab="invites">邀请码管理</button>
+                <button class="tab" data-tab="settings">系统设置</button>
             </div>
 
             <div id="users-tab" class="tab-content active">
@@ -674,6 +675,40 @@
                     </table>
                 </div>
                 <div id="invites-pagination" style="display: flex; justify-content: center; align-items: center; gap: 0.5rem; margin-top: 1rem; flex-wrap: wrap;"></div>
+            </div>
+
+            <div id="settings-tab" class="tab-content">
+                <div class="create-invite-form">
+                    <h3>系统设置</h3>
+                    <form id="system-settings-form">
+                        <div style="margin-bottom: 2rem;">
+                            <h4>登录控制</h4>
+                            <label style="display: flex; align-items: center; gap: 0.5rem; cursor: pointer;">
+                                <input type="checkbox" name="enableManualLogin" id="setting-enableManualLogin">
+                                <span>允许手动注册/登录 (关闭后仅允许第三方登录)</span>
+                            </label>
+                        </div>
+                        
+                        <div style="margin-bottom: 2rem;">
+                            <h4>Discord 验证增强</h4>
+                            <p style="font-size: 0.9em; color: rgba(255,255,255,0.6); margin-bottom: 1rem;">
+                                配置后，用户必须是指定 Discord 服务器的成员才能注册。
+                            </p>
+                            <div class="form-row">
+                                <label class="field">
+                                    <span>必需的 Guild ID (服务器 ID)</span>
+                                    <input type="text" name="discord_guildId" id="setting-discord-guildId" placeholder="留空则不限制">
+                                </label>
+                                <label class="field">
+                                    <span>最低加入天数</span>
+                                    <input type="number" name="discord_minJoinDays" id="setting-discord-minJoinDays" min="0" value="0">
+                                </label>
+                            </div>
+                        </div>
+
+                        <button type="submit" class="primary">保存设置</button>
+                    </form>
+                </div>
             </div>
 
             <div id="status" role="status" aria-live="polite"></div>

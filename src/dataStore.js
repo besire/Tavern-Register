@@ -9,6 +9,7 @@ const DATA_DIR = path.join(__dirname, '../data');
 const USERS_FILE = path.join(DATA_DIR, 'users.json');
 const INVITE_CODES_FILE = path.join(DATA_DIR, 'invite-codes.json');
 const SERVERS_FILE = path.join(DATA_DIR, 'servers.json');
+const SETTINGS_FILE = path.join(DATA_DIR, 'settings.json');
 
 // 确保数据目录存在
 if (!fs.existsSync(DATA_DIR)) {
@@ -45,6 +46,31 @@ function writeJsonFile(filePath, data) {
 }
 
 export class DataStore {
+    /**
+     * 获取系统设置
+     */
+    static getSettings() {
+        const defaults = {
+            enableManualLogin: true,
+            discordConfig: {
+                requiredGuildId: '',
+                minJoinDays: 0
+            }
+        };
+        const settings = readJsonFile(SETTINGS_FILE, defaults);
+        return { ...defaults, ...settings };
+    }
+
+    /**
+     * 更新系统设置
+     */
+    static updateSettings(updates) {
+        const current = this.getSettings();
+        const newSettings = { ...current, ...updates };
+        writeJsonFile(SETTINGS_FILE, newSettings);
+        return newSettings;
+    }
+
     /**
      * 记录注册用户
      */

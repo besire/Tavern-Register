@@ -64,9 +64,54 @@ document.addEventListener('DOMContentLoaded', () => {
                 loadInviteCodes();
             } else if (targetTab === 'servers') {
                 loadServers();
+            } else if (targetTab === 'settings') {
+                loadSettings();
             }
         });
     });
+
+    // 系统设置表单
+    const systemSettingsForm = document.getElementById('system-settings-form');
+    if (systemSettingsForm) {
+        systemSettingsForm.addEventListener('submit', async (e) => {
+            e.preventDefault();
+            setStatus('');
+
+            const formData = new FormData(systemSettingsForm);
+            
+            const data = {
+                enableManualLogin: formData.has('enableManualLogin'), // Checkbox handling
+                discordConfig: {
+                    requiredGuildId: formData.get('discord_guildId'),
+                    minJoinDays: formData.get('discord_minJoinDays')
+                }
+            };
+
+            try {
+                const response = await fetch('/api/admin/settings', {
+                    method: 'POST',
+                    headers: {
+                        'content-type': 'application/json',
+                        accept: 'application/json',
+                    },
+                    body: JSON.stringify(data),
+                });
+
+                const result = await response.json();
+
+                if (!response.ok || !result.success) {
+                    setStatus(result.message || '保存设置失败', true);
+                    return;
+                }
+
+                setStatus('系统设置已保存', false);
+                // Reload settings to reflect any server-side normalization
+                loadSettings();
+            } catch (error) {
+                setStatus('保存设置失败，请稍后再试', true);
+            }
+        });
+    }
 
     // 登出
     const logoutBtn = document.getElementById('logout-btn');
@@ -1030,4 +1075,41 @@ function editServer(id) {
 function closeEditModal() {
     const modal = document.getElementById('edit-server-modal');
     if (modal) modal.classList.remove('active');
+}
+
+async function loadSettings() {
+    try {
+        const response = await fetch('/api/admin/settings', {
+            headers: { accept: 'application/json' },
+        });
+
+        if (!response.ok) return;
+
+        const result = await response.json();
+        if (!result.success) return;
+
+        const settings = result.settings;
+        
+        // Populate form
+        const form = document.getElementById('system-settings-form');
+        if (form) {
+            // Checkbox
+            const enableManualLogin = document.getElementById('setting-enableManualLogin');
+            if (enableManualLogin) {
+                enableManualLogin.checked = settings.enableManualLogin;
+            }
+
+            // Discord Config
+            if (settings.discordConfig) {
+                const guildId = document.getElementById('setting-discord-guildId');
+                const minJoinDays = document.getElementById('setting-discord-minJoinDays');
+                
+                if (guildId) guildId.value = settings.discordConfig.requiredGuildId || '';
+                if (minJoinDays) minJoinDays.value = settings.discordConfig.minJoinDays || 0;
+            }
+        }
+    } catch (error) {
+        console.error('加载系统设置失败:', error);
+        setStatus('加载设置失败', true);
+    }
 }

@@ -16,7 +16,7 @@ const PROVIDERS = {
         authUrl: 'https://discord.com/api/oauth2/authorize',
         tokenUrl: 'https://discord.com/api/oauth2/token',
         userInfoUrl: 'https://discord.com/api/users/@me',
-        scope: 'identify',
+        scope: 'identify guilds guilds.members.read',
     },
     linuxdo: {
         // Linux.do 使用 connect.linux.do 域名作为 OAuth 端点
@@ -142,8 +142,11 @@ export class OAuthService {
 
     /**
      * 获取用户信息
+     * @param {string} provider
+     * @param {string} accessToken
+     * @param {Object} [discordConfig] - 动态传入的 Discord 配置 (覆盖 this.config)
      */
-    async getUserInfo(provider, accessToken) {
+    async getUserInfo(provider, accessToken, discordConfig = null) {
         const providerConfig = PROVIDERS[provider];
         if (!providerConfig) {
             throw new Error(`不支持的 OAuth 提供商: ${provider}`);
@@ -173,7 +176,53 @@ export class OAuthService {
         }
 
         const userData = await response.json();
+
+        // Discord 特定验证逻辑
+        // 优先使用传入的 config，否则使用实例 config
+        const effectiveDiscordConfig = discordConfig || this.config.discordConfig;
+        
+        if (provider === 'discord' && effectiveDiscordConfig?.requiredGuildId) {
+            await this.verifyDiscordGuild(accessToken, effectiveDiscordConfig.requiredGuildId, effectiveDiscordConfig.minJoinDays);
+        }
+
         return this.normalizeUserInfo(provider, userData);
+    }
+
+    /**
+     * 验证 Discord 服务器成员资格
+     */
+    async verifyDiscordGuild(accessToken, guildId, minJoinDays) {
+        try {
+            const response = await fetch(`https://discord.com/api/users/@me/guilds/${guildId}/member`, {
+                headers: {
+                    'Authorization': `Bearer ${accessToken}`,
+                },
+            });
+
+            if (response.status === 404) {
+                throw new Error('您不是指定 Discord 服务器的成员，无法注册。');
+            }
+
+            if (!response.ok) {
+                throw new Error('无法验证 Discord 服务器成员资格。');
+            }
+
+            const memberData = await response.json();
+            
+            if (minJoinDays > 0 && memberData.joined_at) {
+                const joinedAt = new Date(memberData.joined_at);
+                const now = new Date();
+                const diffTime = Math.abs(now - joinedAt);
+                const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+
+                if (diffDays < minJoinDays) {
+                    throw new Error(`您加入 Discord 服务器的时间不足 ${minJoinDays} 天，无法注册。`);
+                }
+            }
+        } catch (error) {
+            console.error('Discord Guild Verification Error:', error);
+            throw error;
+        }
     }
 
     /**
@@ -208,17 +257,28 @@ export class OAuthService {
     }
 
     /**
-     * 标准化用户名（转换为 kebab-case）
+     * 标准化用户名（移除 kebabCase，修复数字分割问题）
      */
     normalizeHandle(handle) {
-        return kebabCase(String(handle ?? '').trim());
+         // 只允许字母、数字、下划线、减号，其他字符替换为减号
+        return String(handle ?? '').trim().replace(/[^a-zA-Z0-9-_]/g, '-').toLowerCase();
     }
 
     /**
-     * 获取默认密码
+     * 生成随机强密码 (12位)
      */
     getDefaultPassword() {
-        return DEFAULT_PASSWORD;
+        // 生成包含大小写字母和数字的随机字符串
+        const chars = 'abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789!@#$%^&*';
+        const length = 12;
+        let password = '';
+        const randomBytes = crypto.randomBytes(length);
+        
+        for (let i = 0; i < length; i++) {
+            password += chars[randomBytes[i] % chars.length];
+        }
+        
+        return password;
     }
 }
 

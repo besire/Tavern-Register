@@ -81,8 +81,10 @@ app.get('/health', (_req, res) => {
 
 // 获取注册配置
 app.get('/api/config', (_req, res) => {
+    const settings = DataStore.getSettings();
     res.json({
         requireInviteCode: config.requireInviteCode || false,
+        enableManualLogin: settings.enableManualLogin,
     });
 });
 
@@ -105,6 +107,11 @@ app.get('/login', (req, res) => {
 });
 
 app.post('/api/login', (req, res) => {
+    const settings = DataStore.getSettings();
+    if (!settings.enableManualLogin) {
+        return res.status(403).json({ success: false, message: '手动登录已关闭，请使用第三方登录' });
+    }
+
     const { handle, password } = req.body;
     if (!handle || !password) {
         return res.status(400).json({ success: false, message: '用户名和密码不能为空' });
@@ -151,6 +158,11 @@ app.get('/select-server', (req, res) => {
 
 app.post('/register', async (req, res) => {
     try {
+        const settings = DataStore.getSettings();
+        if (!settings.enableManualLogin) {
+            return res.status(403).json({ success: false, message: '手动注册已关闭' });
+        }
+
         const { handle, name, password, inviteCode } = sanitizeInput(req.body ?? {});
         
         // 标准化用户名
@@ -443,8 +455,9 @@ app.get('/oauth/callback/:provider', async (req, res) => {
         // 交换授权码获取访问令牌
         const accessToken = await oauthService.exchangeCode(provider, code, requestBaseUrl);
         
-        // 获取用户信息
-        const userInfo = await oauthService.getUserInfo(provider, accessToken);
+        // 获取用户信息 (传入动态配置)
+        const settings = DataStore.getSettings();
+        const userInfo = await oauthService.getUserInfo(provider, accessToken, settings.discordConfig);
         
         // 生成用户名和显示名称
         const tempClient = new SillyTavernClient({});
@@ -484,6 +497,7 @@ app.get('/oauth/callback/:provider', async (req, res) => {
         }
         
         // 创建新用户 (本地)
+        // 使用随机强密码
         const defaultPassword = oauthService.getDefaultPassword();
         
         const forwardedFor = typeof req.headers['x-forwarded-for'] === 'string' ? req.headers['x-forwarded-for'] : '';
@@ -510,8 +524,14 @@ app.get('/oauth/callback/:provider', async (req, res) => {
         // 设置 session 用于选服
         req.session.pendingUserHandle = newUser.handle;
 
-        // 跳转到选服页面
-        res.redirect('/select-server');
+        // 保存临时凭证，跳转到凭证展示页
+        req.session.tempCredentials = {
+            handle: newUser.handle,
+            password: defaultPassword
+        };
+
+        // 跳转到凭证展示页面
+        res.redirect('/credentials.html');
 
     } catch (error) {
         console.error(`OAuth 回调处理失败 (${provider}):`, error);
@@ -582,6 +602,7 @@ app.post('/oauth/invite', async (req, res) => {
         }
         
         // 创建新用户 (本地)
+        // 使用随机强密码
         const defaultPassword = oauthService.getDefaultPassword();
         
         const forwardedFor = typeof req.headers['x-forwarded-for'] === 'string' ? req.headers['x-forwarded-for'] : '';
@@ -609,14 +630,19 @@ app.post('/oauth/invite', async (req, res) => {
         // 设置 session 用于选服
         req.session.pendingUserHandle = newUser.handle;
         
-        // 返回用户名和后续跳转地址，便于前端在成功弹窗中正确展示
+        // 保存临时凭证
+        req.session.tempCredentials = {
+            handle: newUser.handle,
+            password: defaultPassword
+        };
+
+        // 返回用户名和后续跳转地址
         res.json({
             success: true,
             handle: newUser.handle,
-            // OAuth 流程下此时用户尚未绑定具体 SillyTavern 服务器，
-            // 先跳转到本系统的选服页面，由用户选择服务器后再完成远程注册。
-            loginUrl: '/select-server',
-            redirectUrl: '/select-server',
+            // 跳转到凭证展示页
+            loginUrl: '/credentials.html',
+            redirectUrl: '/credentials.html',
         });
         
     } catch (error) {
@@ -1066,6 +1092,57 @@ app.get('/api/admin/stats', requireAdminAuth(config), (_req, res) => {
             success: false,
             message: error.message || '获取统计信息失败',
         });
+    }
+});
+
+// 获取一次性凭证（仅允许读取一次）
+app.get('/api/user/credentials/once', (req, res) => {
+    const creds = req.session.tempCredentials;
+    if (!creds) {
+        return res.status(404).json({ success: false, message: '凭证已过期' });
+    }
+    
+    // 读取后立即销毁
+    delete req.session.tempCredentials;
+    
+    res.json({
+        success: true,
+        handle: creds.handle,
+        password: creds.password
+    });
+});
+
+// 获取系统设置
+app.get('/api/admin/settings', requireAdminAuth(config), (req, res) => {
+    try {
+        const settings = DataStore.getSettings();
+        res.json({ success: true, settings });
+    } catch (error) {
+        res.status(500).json({ success: false, message: error.message });
+    }
+});
+
+// 更新系统设置
+app.post('/api/admin/settings', requireAdminAuth(config), (req, res) => {
+    try {
+        const { enableManualLogin, discordConfig } = req.body;
+        
+        const updates = {};
+        if (typeof enableManualLogin === 'boolean') {
+            updates.enableManualLogin = enableManualLogin;
+        }
+        
+        if (discordConfig && typeof discordConfig === 'object') {
+            updates.discordConfig = {
+                requiredGuildId: String(discordConfig.requiredGuildId || '').trim(),
+                minJoinDays: parseInt(discordConfig.minJoinDays || 0, 10)
+            };
+        }
+        
+        const newSettings = DataStore.updateSettings(updates);
+        res.json({ success: true, settings: newSettings });
+    } catch (error) {
+        res.status(500).json({ success: false, message: error.message });
     }
 });
 
