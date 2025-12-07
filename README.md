@@ -65,7 +65,7 @@ http://localhost:3070/
 
 2.  启动服务:
     ```bash
-    pm2 start ecosystem.config.js
+    pm2 start ecosystem.config.cjs
     ```
 
 3.  查看日志:
