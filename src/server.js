@@ -61,7 +61,7 @@ app.use(session({
     resave: false,
     saveUninitialized: false,
     cookie: {
-        secure: process.env.NODE_ENV === 'production' || process.env.FORCE_HTTPS === 'true',
+        secure: process.env.FORCE_HTTPS === 'true', // 仅在强制 HTTPS 时启用 Secure，避免在 HTTP 环境下导致登录死循环
         httpOnly: true,
         maxAge: 30 * 60 * 1000, // 30 分钟
         sameSite: 'lax', // 增加CSRF保护
