@@ -58,9 +58,9 @@ export class SillyTavernClient {
 
     normalizeHandle(handle) {
         // 移除 kebabCase，避免数字和字母被拆分
-        // 只允许字母、数字、下划线、减号，其他字符替换为减号
+        // 只允许小写字母、数字、减号，其他字符替换为减号
         // 保持原始大小写或转为小写取决于需求，这里为了兼容性和文件系统安全，转为小写
-        return String(handle ?? '').trim().replace(/[^a-zA-Z0-9-_]/g, '-').toLowerCase();
+        return String(handle ?? '').trim().toLowerCase().replace(/[^a-z0-9-]/g, '-');
     }
 
     /**

@@ -260,8 +260,8 @@ export class OAuthService {
      * 标准化用户名（移除 kebabCase，修复数字分割问题）
      */
     normalizeHandle(handle) {
-         // 只允许字母、数字、下划线、减号，其他字符替换为减号
-        return String(handle ?? '').trim().replace(/[^a-zA-Z0-9-_]/g, '-').toLowerCase();
+         // 只允许小写字母、数字、减号，其他字符替换为减号
+        return String(handle ?? '').trim().toLowerCase().replace(/[^a-z0-9-]/g, '-');
     }
 
     /**
