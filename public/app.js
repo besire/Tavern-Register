@@ -499,24 +499,37 @@ document.addEventListener('DOMContentLoaded', () => {
             const response = await fetch('/api/config');
             if (response.ok) {
                 const config = await response.json();
-                if (config.enableManualLogin === false) {
-                    // 隐藏注册表单
+                
+                // 默认开启。只有明确关闭时才隐藏。
+                if (config.enableManualLogin !== false) {
+                    if (form) form.style.display = '';
+                } else {
+                    // 明确关闭
                     if (form) {
                         form.style.display = 'none';
-                        const cardBody = form.parentElement;
-                        if (cardBody) {
-                            const msg = document.createElement('p');
-                            msg.textContent = '手动注册已关闭，请直接使用第三方账号登录。';
-                            msg.style.textAlign = 'center';
-                            msg.style.margin = '2rem 0';
-                            cardBody.insertBefore(msg, form);
+                        // 防止重复添加提示
+                        if (!document.getElementById('reg-closed-msg')) {
+                            const cardBody = form.parentElement;
+                            if (cardBody) {
+                                const msg = document.createElement('p');
+                                msg.id = 'reg-closed-msg';
+                                msg.textContent = '手动注册已关闭，请直接使用第三方账号登录。';
+                                msg.style.textAlign = 'center';
+                                msg.style.margin = '2rem 0';
+                                msg.style.color = 'var(--text-muted)'; // use theme color if possible
+                                cardBody.insertBefore(msg, form);
+                            }
                         }
                     }
-                    // 隐藏分割线等（如果有）
                 }
+            } else {
+                // 请求失败，兜底显示
+                if (form) form.style.display = '';
             }
         } catch (e) {
             console.error('Failed to load config', e);
+            // 出错时也显示
+            if (form) form.style.display = '';
         }
     }
 });

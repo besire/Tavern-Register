@@ -16,12 +16,12 @@
             <div id="oauth-providers" class="oauth-section" style="display: none;">
                 <p class="oauth-title">第三方登录</p>
                 <div class="oauth-buttons" id="oauth-buttons"></div>
-                <div class="divider" id="login-divider">
+                <div class="divider" id="login-divider" style="display: none;">
                     <span>或</span>
                 </div>
             </div>
 
-            <form id="login-form" novalidate>
+            <form id="login-form" novalidate style="display: none;">
                 <label class="field">
                     <span>用户标识</span>
                     <input type="text" name="handle" maxlength="64" required autocomplete="username" placeholder="请输入您的用户标识">
@@ -35,7 +35,7 @@
                 <button type="submit" class="primary">登录</button>
             </form>
 
-            <p class="note" id="register-note">
+            <p class="note" id="register-note" style="display: none;">
                 还没有账号？
                 <a href="/register">立即注册</a>
             </p>
