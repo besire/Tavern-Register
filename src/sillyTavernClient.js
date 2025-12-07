@@ -57,10 +57,21 @@ export class SillyTavernClient {
     }
 
     normalizeHandle(handle) {
-        // 移除 kebabCase，避免数字和字母被拆分
-        // 只允许小写字母、数字、减号，其他字符替换为减号
-        // 保持原始大小写或转为小写取决于需求，这里为了兼容性和文件系统安全，转为小写
-        return String(handle ?? '').trim().toLowerCase().replace(/[^a-z0-9-]/g, '-');
+        if (!handle) return '';
+        
+        let normalized = String(handle).trim().toLowerCase();
+        
+        // 在字母和数字之间添加短横线
+        normalized = normalized.replace(/([a-z])([0-9])/g, '$1-$2');
+        normalized = normalized.replace(/([0-9])([a-z])/g, '$1-$2');
+        
+        // 将非字母数字字符替换为短横线
+        normalized = normalized.replace(/[^a-z0-9]+/g, '-');
+        
+        // 移除开头和结尾的短横线
+        normalized = normalized.replace(/^-+|-+$/g, '');
+        
+        return normalized;
     }
 
     /**

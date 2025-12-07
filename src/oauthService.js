@@ -257,11 +257,28 @@ export class OAuthService {
     }
 
     /**
-     * 标准化用户名（移除 kebabCase，修复数字分割问题）
+     * 标准化用户名
+     * 规则：
+     * 1. 转换为小写
+     * 2. 字母和数字之间必须用连字符分隔
+     * 3. 仅允许字母、数字、连字符
      */
     normalizeHandle(handle) {
-         // 只允许小写字母、数字、减号，其他字符替换为减号
-        return String(handle ?? '').trim().toLowerCase().replace(/[^a-z0-9-]/g, '-');
+        if (!handle) return '';
+        
+        let normalized = String(handle).trim().toLowerCase();
+        
+        // 在字母和数字之间添加短横线
+        normalized = normalized.replace(/([a-z])([0-9])/g, '$1-$2');
+        normalized = normalized.replace(/([0-9])([a-z])/g, '$1-$2');
+        
+        // 将非字母数字字符替换为短横线
+        normalized = normalized.replace(/[^a-z0-9]+/g, '-');
+        
+        // 移除开头和结尾的短横线
+        normalized = normalized.replace(/^-+|-+$/g, '');
+        
+        return normalized;
     }
 
     /**

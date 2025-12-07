@@ -16,7 +16,43 @@ document.addEventListener('DOMContentLoaded', () => {
     // 加载 OAuth 提供商
     loadOAuthProviders();
 
+    // 检查手动登录配置
+    checkLoginConfig();
+
     if (!form) return;
+
+    // 检查手动登录配置
+    async function checkLoginConfig() {
+        try {
+            const response = await fetch('/api/config');
+            if (response.ok) {
+                const config = await response.json();
+                if (config.enableManualLogin === false) {
+                    // 隐藏登录表单
+                    if (form) form.style.display = 'none';
+                    // 隐藏分割线
+                    const divider = document.querySelector('.divider');
+                    if (divider) divider.style.display = 'none';
+                    // 隐藏标题或修改提示
+                    const header = document.querySelector('.card-header h2');
+                    if (header) header.textContent = '登录';
+                    
+                    // 隐藏底部的注册链接
+                    const note = document.querySelector('.note');
+                    if (note) note.style.display = 'none';
+                    
+                    // 如果只剩下 OAuth，调整样式
+                    if (oauthProvidersElement) {
+                        oauthProvidersElement.style.marginTop = '0';
+                        oauthProvidersElement.style.paddingTop = '0';
+                        oauthProvidersElement.style.borderTop = 'none';
+                    }
+                }
+            }
+        } catch (e) {
+            console.error('Failed to load config', e);
+        }
+    }
 
     // 加载 OAuth 提供商
     async function loadOAuthProviders() {

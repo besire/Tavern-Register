@@ -39,6 +39,9 @@ document.addEventListener('DOMContentLoaded', () => {
     // 检查是否需要邀请码
     checkInviteCodeRequirement();
     
+    // 检查手动注册配置
+    checkRegisterConfig();
+    
     // 添加用户名实时预览
     setupHandlePreview();
 
@@ -487,6 +490,33 @@ document.addEventListener('DOMContentLoaded', () => {
             }
         } catch (error) {
             console.error('检查邀请码要求失败:', error);
+        }
+    }
+
+    // 检查注册配置
+    async function checkRegisterConfig() {
+        try {
+            const response = await fetch('/api/config');
+            if (response.ok) {
+                const config = await response.json();
+                if (config.enableManualLogin === false) {
+                    // 隐藏注册表单
+                    if (form) {
+                        form.style.display = 'none';
+                        const cardBody = form.parentElement;
+                        if (cardBody) {
+                            const msg = document.createElement('p');
+                            msg.textContent = '手动注册已关闭，请直接使用第三方账号登录。';
+                            msg.style.textAlign = 'center';
+                            msg.style.margin = '2rem 0';
+                            cardBody.insertBefore(msg, form);
+                        }
+                    }
+                    // 隐藏分割线等（如果有）
+                }
+            }
+        } catch (e) {
+            console.error('Failed to load config', e);
         }
     }
 });
