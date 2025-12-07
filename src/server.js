@@ -833,6 +833,28 @@ app.get('/api/admin/users', requireAdminAuth(config), (req, res) => {
     }
 });
 
+// 删除用户
+app.delete('/api/admin/users/:handle', requireAdminAuth(config), (req, res) => {
+    try {
+        const { handle } = req.params;
+        const deleted = DataStore.deleteUser(handle);
+        
+        if (deleted) {
+            res.json({ success: true, message: '用户已删除' });
+        } else {
+            res.status(404).json({
+                success: false,
+                message: '用户不存在',
+            });
+        }
+    } catch (error) {
+        res.status(500).json({
+            success: false,
+            message: error.message || '删除用户失败',
+        });
+    }
+});
+
 // 获取服务器列表（管理员用）
 app.get('/api/admin/servers', requireAdminAuth(config), (req, res) => {
     try {

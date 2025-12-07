@@ -547,6 +547,9 @@ async function loadUsers() {
                 <td>${user.inviteCode || '-'}</td>
                 <td>${formatIP(user.ip)}</td>
                 <td>${formatDate(user.registeredAt)}</td>
+                <td>
+                    <button class="action-btn btn-danger" onclick="deleteUser('${user.handle}')">删除</button>
+                </td>
             </tr>
         `;
         }).join('');
@@ -1111,5 +1114,31 @@ async function loadSettings() {
     } catch (error) {
         console.error('加载系统设置失败:', error);
         setStatus('加载设置失败', true);
+    }
+}
+
+async function deleteUser(handle) {
+    if (!confirm(`确定要删除用户 ${handle} 吗？此操作仅删除本系统的注册记录，不会删除酒馆中的用户。`)) {
+        return;
+    }
+
+    try {
+        const response = await fetch(`/api/admin/users/${encodeURIComponent(handle)}`, {
+            method: 'DELETE',
+            headers: { accept: 'application/json' },
+        });
+
+        const result = await response.json();
+
+        if (!response.ok || !result.success) {
+            setStatus(result.message || '删除失败', true);
+            return;
+        }
+
+        setStatus('用户已删除', false);
+        loadUsers();
+        loadStats();
+    } catch (error) {
+        setStatus('删除失败，请稍后再试', true);
     }
 }

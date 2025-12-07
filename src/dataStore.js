@@ -117,6 +117,19 @@ export class DataStore {
     }
 
     /**
+     * 删除用户
+     */
+    static deleteUser(handle) {
+        const users = readJsonFile(USERS_FILE, []);
+        const filtered = users.filter(u => u.handle !== handle);
+        if (filtered.length < users.length) {
+            writeJsonFile(USERS_FILE, filtered);
+            return true;
+        }
+        return false;
+    }
+
+    /**
      * 根据 OAuth ID 获取用户
      */
     static getUserByOAuth(provider, oauthId) {
