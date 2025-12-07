@@ -27,18 +27,23 @@ document.addEventListener('DOMContentLoaded', () => {
             const response = await fetch('/api/config');
             if (response.ok) {
                 const config = await response.json();
+                
+                // 只要不是明确的 true，就视为关闭（如果用户未配置可能默认为 true，但这里我们要严格一点，或者根据需求）
+                // 后端默认是 true。这里我们使用 loose check，如果为 false (boolean) 就隐藏。
                 if (config.enableManualLogin === false) {
                     // 隐藏登录表单
                     if (form) form.style.display = 'none';
+                    
                     // 隐藏分割线
-                    const divider = document.querySelector('.divider');
+                    const divider = document.getElementById('login-divider') || document.querySelector('.divider');
                     if (divider) divider.style.display = 'none';
+                    
                     // 隐藏标题或修改提示
                     const header = document.querySelector('.card-header h2');
                     if (header) header.textContent = '登录';
                     
                     // 隐藏底部的注册链接
-                    const note = document.querySelector('.note');
+                    const note = document.getElementById('register-note') || document.querySelector('.note');
                     if (note) note.style.display = 'none';
                     
                     // 如果只剩下 OAuth，调整样式

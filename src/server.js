@@ -82,6 +82,8 @@ app.get('/health', (_req, res) => {
 // 获取注册配置
 app.get('/api/config', (_req, res) => {
     const settings = DataStore.getSettings();
+    // Debug: 打印当前配置状态
+    // console.debug('API Config Request - enableManualLogin:', settings.enableManualLogin);
     res.json({
         requireInviteCode: config.requireInviteCode || false,
         enableManualLogin: settings.enableManualLogin,
