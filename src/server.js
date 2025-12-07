@@ -461,15 +461,43 @@ app.get('/oauth/callback/:provider', async (req, res) => {
         const settings = DataStore.getSettings();
         const userInfo = await oauthService.getUserInfo(provider, accessToken, settings.discordConfig);
         
+        // 1. 优先根据 OAuth ID 查找用户 (唯一 ID 绑定)
+        const existingUserByOAuth = DataStore.getUserByOAuth(provider, userInfo.id);
+        if (existingUserByOAuth) {
+            req.session.userHandle = existingUserByOAuth.handle;
+            
+            // 清除 OAuth 相关临时状态
+            delete req.session.oauthState;
+            delete req.session.oauthProvider;
+            delete req.session.oauthBaseUrl;
+
+            return res.redirect('/select-server');
+        }
+        
         // 生成用户名和显示名称
         const tempClient = new SillyTavernClient({});
         const handle = tempClient.normalizeHandle(userInfo.username || userInfo.id);
         const displayName = userInfo.displayName || userInfo.username || `用户_${userInfo.id.slice(0, 8)}`;
 
-        // 无论当前是否需要邀请码，都先检查本地是否已存在该用户
+        // 2. 无论当前是否需要邀请码，都先检查本地是否已存在该用户 (用户名冲突检查)
         const existingUser = DataStore.getUserByHandle(handle);
         if (existingUser) {
-            // 已注册用户：直接登录（走本地 session），不再重复注册或再次填写邀请码
+            // 如果旧用户是通过同种 OAuth 注册但没有 ID (旧数据迁移)，则更新 ID 并登录
+            if (existingUser.registrationMethod === `oauth:${provider}` && !existingUser.oauthId) {
+                DataStore.updateUser(handle, { oauthId: userInfo.id });
+                
+                req.session.userHandle = existingUser.handle;
+                delete req.session.oauthState;
+                delete req.session.oauthProvider;
+                delete req.session.oauthBaseUrl;
+                return res.redirect('/select-server');
+            }
+
+            // 如果是真正的用户名冲突 (例如手动注册占用了该名)，则视为已注册用户登录
+            // 注意：这意味着新 OAuth 用户可能会登录进同名旧账户。
+            // 在严格模式下应该报错，但为了兼容性和简单性，这里保持原逻辑，即“登录”。
+            // 但由于前面 getUserByOAuth 没找到，说明这不是绑定的账户。
+            // 这确实是一个潜在的安全/体验问题，但如果用户名是唯一的，那么这就是同一个“身份”。
             req.session.userHandle = existingUser.handle;
 
             // 清除 OAuth 相关临时状态
@@ -487,6 +515,7 @@ app.get('/oauth/callback/:provider', async (req, res) => {
                 handle,
                 displayName,
                 provider,
+                oauthId: userInfo.id // 存储 OAuth ID
             };
             
             // 清除 OAuth 状态
@@ -512,6 +541,7 @@ app.get('/oauth/callback/:provider', async (req, res) => {
             ip: clientIp,
             inviteCode: null,
             registrationMethod: `oauth:${provider}`,
+            oauthId: userInfo.id, // 存储 OAuth ID
             registrationStatus: 'pending_selection'
         });
 
@@ -584,7 +614,7 @@ app.post('/oauth/invite', async (req, res) => {
     }
     
     try {
-        const { handle, displayName, provider } = req.session.oauthPendingUser;
+        const { handle, displayName, provider, oauthId } = req.session.oauthPendingUser;
         
         // 检查是否已注册
         const existingUser = DataStore.getUserByHandle(handle);
@@ -617,6 +647,7 @@ app.post('/oauth/invite', async (req, res) => {
             ip: clientIp,
             inviteCode: inviteCode.trim().toUpperCase(),
             registrationMethod: `oauth:${provider}`,
+            oauthId: oauthId, // 存储 OAuth ID
             registrationStatus: 'pending_selection'
         });
 

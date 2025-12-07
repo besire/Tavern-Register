@@ -117,6 +117,18 @@ export class DataStore {
     }
 
     /**
+     * 根据 OAuth ID 获取用户
+     */
+    static getUserByOAuth(provider, oauthId) {
+        if (!oauthId) return null;
+        const users = readJsonFile(USERS_FILE, []);
+        return users.find(u => 
+            u.registrationMethod === `oauth:${provider}` && 
+            String(u.oauthId) === String(oauthId)
+        );
+    }
+
+    /**
      * 添加服务器
      */
     static addServer(serverInfo) {
