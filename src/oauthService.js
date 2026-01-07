@@ -16,7 +16,7 @@ const PROVIDERS = {
         authUrl: 'https://discord.com/api/oauth2/authorize',
         tokenUrl: 'https://discord.com/api/oauth2/token',
         userInfoUrl: 'https://discord.com/api/users/@me',
-        scope: 'identify guilds guilds.members.read',
+        scope: 'identify guilds.members.read',
     },
     linuxdo: {
         // Linux.do 使用 connect.linux.do 域名作为 OAuth 端点
